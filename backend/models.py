@@ -1,20 +1,30 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from database import Base
 
-# This URL connects to your Docker container
-# Format: postgresql://user:password@localhost:port/dbname
-SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/financedb"
+class User(Base):
+    __tablename__ = "users"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
 
-Base = declarative_base()
+    # Relationship: One user has many transactions
+    transactions = relationship("Transaction", back_populates="owner")
 
-# Dependency to get DB session in API endpoints
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    amount = Column(Float)  # Financial value
+    category = Column(String)  # e.g., "Food", "Rent"
+    description = Column(String)
+    date = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Link to the User table
+    user_id = Column(Integer, ForeignKey("users.id"))
+    
+    # Relationship: A transaction belongs to one owner
+    owner = relationship("User", back_populates="transactions")
