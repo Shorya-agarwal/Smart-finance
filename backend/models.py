@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -13,6 +13,22 @@ class User(Base):
 
     # Relationship: One user has many transactions
     transactions = relationship("Transaction", back_populates="owner")
+    alerts = relationship("AlertThreshold", back_populates="owner")
+
+class AlertThreshold(Base):
+    __tablename__ = "alert_thresholds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    category = Column(String)  # e.g., "Food", "Rent" or "ALL"
+    amount_limit = Column(Float)
+    window = Column(String, default="TRANSACTION") # "TRANSACTION" or "MONTHLY"
+
+    user_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="alerts")
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'category', 'window', name='uq_alert_threshold'),
+    )
 
 class Transaction(Base):
     __tablename__ = "transactions"

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import models
 from database import engine, get_db
 from ai_service import categorize_expense
+from alert_service import check_and_alert
 
 # Create tables
 models.Base.metadata.create_all(bind=engine)
@@ -33,12 +34,36 @@ class TransactionCreate(BaseModel):
     amount: float
     user_id: int
 
+from datetime import datetime
 class TransactionResponse(BaseModel):
     id: int
     description: str
     amount: float
     category: str
-    date: Optional[str] = None # simplified for response
+    date: Optional[datetime] = None # Pydantic will handle datetime conversion
+
+    class Config:
+        orm_mode = True
+
+class AlertThresholdCreate(BaseModel):
+    category: str
+    amount_limit: float
+    window: str = "TRANSACTION"
+    user_id: int
+
+class AlertThresholdResponse(BaseModel):
+    id: int
+    category: str
+    amount_limit: float
+    window: str
+    user_id: int
+
+    class Config:
+        orm_mode = True
+
+class TransactionWithAlerts(BaseModel):
+    transaction: TransactionResponse
+    alerts: List[str]
 
     class Config:
         orm_mode = True
@@ -47,7 +72,7 @@ class TransactionResponse(BaseModel):
 def read_root():
     return {"message": "SmartFinance Backend is Running"}
 
-@app.post("/transactions/")
+@app.post("/transactions/", response_model=TransactionWithAlerts)
 def create_transaction(transaction: TransactionCreate, db: Session = Depends(get_db)):
     # 1. AI Categorization
     ai_category = categorize_expense(transaction.description)
@@ -62,9 +87,44 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
-    return db_transaction
+
+    # 3. Check for Alerts
+    alerts = check_and_alert(db_transaction, db)
+
+    return {"transaction": db_transaction, "alerts": alerts}
 
 @app.get("/transactions/")
 def read_transactions(db: Session = Depends(get_db)):
     # Get all transactions, newest first
     return db.query(models.Transaction).order_by(models.Transaction.id.desc()).all()
+
+@app.post("/alerts/")
+def create_alert_threshold(alert: AlertThresholdCreate, db: Session = Depends(get_db)):
+    # Check if exists
+    existing_alert = db.query(models.AlertThreshold).filter(
+        models.AlertThreshold.user_id == alert.user_id,
+        models.AlertThreshold.category == alert.category,
+        models.AlertThreshold.window == alert.window
+    ).first()
+
+    if existing_alert:
+        # Update existing
+        existing_alert.amount_limit = alert.amount_limit
+        db.commit()
+        db.refresh(existing_alert)
+        return existing_alert
+
+    db_alert = models.AlertThreshold(
+        category=alert.category,
+        amount_limit=alert.amount_limit,
+        window=alert.window,
+        user_id=alert.user_id
+    )
+    db.add(db_alert)
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
+
+@app.get("/alerts/", response_model=List[AlertThresholdResponse])
+def read_alerts(db: Session = Depends(get_db)):
+    return db.query(models.AlertThreshold).all()
