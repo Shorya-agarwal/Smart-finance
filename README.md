@@ -18,7 +18,7 @@ The system is built on a loosely coupled Monorepo architecture to ensure scalabi
 * **AI Layer:** Google Gemini 2.0 Flash with a custom prompt engineering pipeline.
 * **DevOps:** Docker Compose for orchestration.
 
-## ✨ Key Features
+## ✨ Key Features (Intuit-Aligned)
 
 ### 1. Intelligent Transaction Categorization (GenAI)
 Instead of forcing users to manually select categories, the system uses an LLM agent to analyze unstructured text (e.g., "Uber to SFO") and map it to standardized financial ledgers (e.g., "Transportation").
@@ -44,29 +44,4 @@ Real-time dashboard rendering of expense aggregation and historical trends using
 ```bash
 docker-compose up -d
 # Starts PostgreSQL on port 5432
-```
-### 2. Backend Setup
-``` bash
-cd backend
-python -m venv venv
-# Windows
-.\venv\Scripts\activate
-# Mac/Linux
-source venv/bin/activate
 
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
-Note: Create a .env file in /backend with GEMINI_API_KEY=your_key
-
-### 3.Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 🔮 Future Roadmap
-* **OCR Receipt Scanning:** Integrating Tesseract for image-to-text transaction entry.
-* **Anomaly Detection:** Using Isolation Forests (Scikit-Learn) to flag fraudulent transactions.
-* **CI/CD:** GitHub Actions pipeline for automated testing.
