@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 # This URL connects to your Docker container
 # Format: postgresql://user:password@localhost:port/dbname
-SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/financedb"
+SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost:5432/resumedb"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
